@@ -145,11 +145,20 @@ def cmd_render(args: argparse.Namespace) -> int:
 def cmd_preflight(args: argparse.Namespace) -> int:
     plugins = get_available_plugins(args.connect_url)
     available_classes = set(plugins.keys())
-    expected = set(REQUIRED_CONNECTOR_CLASSES)
+    expected: set[str] = set()
+
+    # Scope plugin requirements to the connector files being operated on when
+    # they are supplied. This keeps `deploy --preflight <single-file>` usable on
+    # clusters that intentionally install only one plugin type (source-only or
+    # sink-only workers).
     if args.files:
         for fp in args.files:
             cfg = read_json(Path(fp))
             expected.add(str(cfg["config"]["connector.class"]))
+    else:
+        # Backward-compatible fallback for standalone preflight calls where no
+        # connector files were provided: validate the baseline plugin set.
+        expected = set(REQUIRED_CONNECTOR_CLASSES)
 
     missing = sorted(expected - available_classes)
     if missing:
