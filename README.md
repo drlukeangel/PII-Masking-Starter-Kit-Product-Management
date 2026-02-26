@@ -24,6 +24,7 @@ python3 scripts/manage_connectors.py deploy --connect-url http://localhost:8083 
 
 ---
 
+=======
 ## What this repo includes
 
 - `connectors/source-postgres-cdc.json`
