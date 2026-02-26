@@ -1,0 +1,31 @@
+{
+  "name": "aurora-dsql-cdc-source",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    "topic.prefix": "aurora_dsql_src",
+
+    "database.hostname": "${AURORA_DSQL_HOST}",
+    "database.port": "5432",
+    "database.user": "${SOURCE_DB_USER}",
+    "database.password": "${AURORA_DSQL_PASSWORD}",
+    "database.dbname": "${AURORA_DSQL_DB}",
+
+    "plugin.name": "pgoutput",
+    "slot.name": "dbz_aurora_dsql_slot",
+    "publication.name": "dbz_aurora_dsql_pub",
+    "publication.autocreate.mode": "filtered",
+
+    "schema.include.list": "public",
+    "table.include.list": "public.customers,public.orders",
+
+    "snapshot.mode": "initial",
+    "tombstones.on.delete": "false",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "true",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true"
+  }
+}

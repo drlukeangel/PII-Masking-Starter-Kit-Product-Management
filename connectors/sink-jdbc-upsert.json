@@ -1,0 +1,28 @@
+{
+  "name": "aurora-dsql-jdbc-sink",
+  "config": {
+    "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+    "tasks.max": "1",
+
+    "topics.regex": "aurora_dsql_src\\.public\\.(customers|orders)",
+
+    "connection.url": "jdbc:postgresql://${AURORA_DSQL_HOST}:5432/${AURORA_DSQL_DB}?sslmode=require&reWriteBatchedInserts=true",
+    "connection.username": "${SINK_DB_USER}",
+    "connection.password": "${AURORA_DSQL_PASSWORD}",
+
+    "dialect.name": "PostgreSqlDatabaseDialect",
+
+    "insert.mode": "upsert",
+    "delete.enabled": "true",
+    "primary.key.mode": "record_key",
+    "primary.key.fields": "id",
+
+    "schema.evolution": "basic",
+    "table.name.format": "${topic}",
+
+    "quote.identifiers": "true",
+    "batch.size": "500",
+    "max.retries": "10",
+    "retry.backoff.ms": "3000"
+  }
+}
