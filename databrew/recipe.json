@@ -1,0 +1,104 @@
+{
+  "Name": "tool-telemetry-pii-masking",
+  "Description": "Encodes the PII rubric for tool-telemetry data. Direct identifiers hashed, quasi-identifiers tokenized, sensitive attributes generalized, behavioral data kept. Mirrors glue/pii_masking_job.py.",
+  "Steps": [
+    {
+      "Action": {
+        "Operation": "CRYPTOGRAPHIC_HASH",
+        "Parameters": {
+          "sourceColumn": "tool_serial",
+          "secretId": "arn:aws:secretsmanager:us-east-1:000000000000:secret:pii/salt"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "CRYPTOGRAPHIC_HASH",
+        "Parameters": {
+          "sourceColumn": "operator_email",
+          "secretId": "arn:aws:secretsmanager:us-east-1:000000000000:secret:pii/salt"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "DETERMINISTIC_ENCRYPT",
+        "Parameters": {
+          "sourceColumn": "operator_id",
+          "namespace": "op",
+          "secretId": "arn:aws:secretsmanager:us-east-1:000000000000:secret:pii/token-key"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "DETERMINISTIC_ENCRYPT",
+        "Parameters": {
+          "sourceColumn": "operator_name",
+          "namespace": "name",
+          "secretId": "arn:aws:secretsmanager:us-east-1:000000000000:secret:pii/token-key"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "DETERMINISTIC_ENCRYPT",
+        "Parameters": {
+          "sourceColumn": "job_site_id",
+          "namespace": "site",
+          "secretId": "arn:aws:secretsmanager:us-east-1:000000000000:secret:pii/token-key"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "MATH_FUNCTION",
+        "Parameters": {
+          "sourceColumn": "gps_lat",
+          "function": "ROUND",
+          "value": "0.01",
+          "comment": "Snap latitude to ~1.1km grid"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "MATH_FUNCTION",
+        "Parameters": {
+          "sourceColumn": "gps_lon",
+          "function": "ROUND",
+          "value": "0.01",
+          "comment": "Snap longitude to ~1.1km grid"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "EXTRACT_BETWEEN_DELIMITERS",
+        "Parameters": {
+          "sourceColumn": "job_site_address",
+          "startDelimiter": ",",
+          "startDelimiterOccurrence": "1",
+          "endDelimiter": "END_OF_STRING",
+          "comment": "Drop street number+name; keep city, state ZIP"
+        }
+      }
+    },
+    {
+      "Action": {
+        "Operation": "DATE_FUNCTION",
+        "Parameters": {
+          "sourceColumn": "event_ts",
+          "function": "DATE_TRUNC",
+          "unit": "HOUR",
+          "comment": "Round timestamps to the hour"
+        }
+      }
+    }
+  ],
+  "Tags": {
+    "owner": "lukeangel.co",
+    "rubric_version": "1.0",
+    "kit": "pii-masking-starter-kit-product-management"
+  }
+}

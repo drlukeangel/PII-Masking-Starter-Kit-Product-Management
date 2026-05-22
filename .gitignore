@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+.DS_Store
+spark-warehouse/
+metastore_db/
+data/tool_telemetry_masked.csv
+data/tool_telemetry_masked/
+data/tool_telemetry.csv
+!data/sample_tool_telemetry.csv
+*.crc
+_SUCCESS
