@@ -1,0 +1,39 @@
+name: pii-rubric
+
+# Fails the build if the masking job's output ever drifts from rubric.md.
+# It masks the sample dataset with the production Glue job, then runs the
+# verify script against that output — catching drift in PR, not in a
+# regulator's letter.
+on: [pull_request, push]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # PySpark 3.5 runs on Java 8/11/17.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Mask the sample dataset (production Glue path)
+        run: |
+          spark-submit glue/pii_masking_job.py \
+            --input data/sample_tool_telemetry.csv \
+            --output data/masked_out \
+            --salt "$(openssl rand -hex 32)"
+
+      # coalesce(1).write.csv() emits a directory of part files; grab the CSV.
+      - name: Locate the masked CSV
+        run: echo "MASKED=$(find data/masked_out -name 'part-*.csv' | head -1)" >> "$GITHUB_ENV"
+
+      - name: Verify masking matches the rubric
+        run: python verify.py --input "$MASKED" --rubric rubric.md

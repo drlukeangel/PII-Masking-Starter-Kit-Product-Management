@@ -66,7 +66,7 @@ def tokenize_quasi(value: str, namespace: str) -> str:
     if value is None or value == "":
         return ""
     digest = hashlib.sha256(f"{namespace}::{value}".encode("utf-8")).hexdigest()
-    return f"{namespace[:3]}_{digest[:8]}"
+    return f"{namespace}_{digest[:8]}"
 
 
 def snap_to_grid(coord: float, grid: float = GPS_GRID_DEGREES) -> float:

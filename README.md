@@ -157,21 +157,65 @@ Glue for production scale.
 
 ---
 
+## Run it in a container
+
+No local Java or Spark? The `Dockerfile` bundles Java 17 + Python + PySpark,
+so the production `spark-submit` path runs anywhere a container does. The
+default run masks the bundled sample and verifies the output against the
+rubric (exit 0 = rubric honored):
+
+```bash
+docker build -t pii-kit .        # or: podman build -t pii-kit .
+docker run --rm pii-kit          # or: podman run --rm pii-kit
+```
+
+Point it at your own data and capture the masked output by mounting a volume
+and overriding the input:
+
+```bash
+docker run --rm \
+  -v "$PWD/data:/data" \
+  -e INPUT=/data/your_telemetry.csv \
+  -e OUTDIR=/data/masked_out \
+  pii-kit
+```
+
+The salt rotates per run by default; set `-e SALT=...` (e.g. from Secrets
+Manager) to pin it.
+
+---
+
 ## CI integration
+
+A ready-to-use workflow ships in [`.github/workflows/pii-rubric.yml`](.github/workflows/pii-rubric.yml).
+It masks the sample dataset with the production Glue job, then verifies the
+*output* — verifying the raw sample would (correctly) fail, since the whole
+point is to check what comes *out* of the pipeline:
 
 ```yaml
 # .github/workflows/pii-rubric.yml
 name: pii-rubric
-on: [pull_request]
+on: [pull_request, push]
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install -r requirements.txt
-      - run: python verify.py --input data/sample_tool_telemetry.csv --rubric rubric.md
+      - name: Mask the sample dataset
+        run: |
+          spark-submit glue/pii_masking_job.py \
+            --input data/sample_tool_telemetry.csv \
+            --output data/masked_out \
+            --salt "$(openssl rand -hex 32)"
+      - name: Verify masking matches the rubric
+        run: |
+          masked=$(find data/masked_out -name 'part-*.csv' | head -1)
+          python verify.py --input "$masked" --rubric rubric.md
 ```
 
 The verify script reads `rubric.md`, checks the masked output against

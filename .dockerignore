@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.DS_Store
+spark-warehouse
+metastore_db
+# Generated pipeline outputs — never bake these into the image.
+data/tool_telemetry.csv
+data/tool_telemetry_masked.csv
+data/tool_telemetry_masked/
+data/masked_out/
+data/sample_tool_telemetry_masked.csv
