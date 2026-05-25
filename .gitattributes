@@ -1,0 +1,8 @@
+# Shell scripts run inside the Linux container — CRLF breaks bash with
+# `$'\r': command not found`. Force LF so a checkout on any platform builds.
+*.sh text eol=lf
+docker/entrypoint.sh text eol=lf
+
+# Keep the container build inputs LF too, for the same reason.
+Dockerfile text eol=lf
+.dockerignore text eol=lf
