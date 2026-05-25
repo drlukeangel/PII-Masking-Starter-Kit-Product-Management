@@ -95,7 +95,7 @@ RULES.update({
     "tool_serial":      expect_hex_digest(64),
     "operator_email":   expect_hex_digest(64),
     "operator_id":      expect_token("op"),
-    "operator_name":    expect_token("name"),
+    "operator_name":    expect_hex_digest(64),   # now hashed as a direct identifier
     "job_site_id":      expect_token("site"),
     "job_site_address": expect_no_street_number(),
     "gps_lat":          expect_gps_snapped(),

@@ -33,8 +33,8 @@ except ImportError:
     HAVE_SPARK = False
 
 # Columns by rubric bucket. Single source of truth — verify.py reads this too.
-DIRECT_IDENTIFIERS = ["tool_serial", "operator_email"]
-QUASI_IDENTIFIERS  = ["operator_id", "operator_name", "job_site_id"]
+DIRECT_IDENTIFIERS = ["tool_serial", "operator_email", "operator_name"]
+QUASI_IDENTIFIERS  = ["operator_id", "job_site_id"]
 SENSITIVE_LOCATION = [("gps_lat", "gps_lon")]   # paired
 SENSITIVE_TIMESTAMPS = ["event_ts"]
 SENSITIVE_FREETEXT_DROP_FROM = "job_site_address"   # drop street; keep city + state
@@ -60,9 +60,14 @@ def hash_direct(value: str, salt: str) -> str:
 
 
 def tokenize_quasi(value: str, namespace: str) -> str:
-    """Quasi-identifier → stable random-looking token. Same value always
-    maps to the same token within a given namespace; different namespaces
-    keep different mappings so cross-table joins on quasi columns break."""
+    """Quasi-identifier → stable, namespaced token. Same value always maps to
+    the same token within a namespace; different namespaces keep different
+    mappings so cross-table joins on quasi columns break.
+
+    NOTE: this is a one-way hash, not reversible tokenization. The original
+    value cannot be recovered from the token alone — only by re-hashing a known
+    roster of inputs. See the TODO(vault) in mask() for the recoverable,
+    access-controlled replacement the rubric actually calls for."""
     if value is None or value == "":
         return ""
     digest = hashlib.sha256(f"{namespace}::{value}".encode("utf-8")).hexdigest()
@@ -95,7 +100,6 @@ def drop_street(address: str) -> str:
 def _register_udfs(spark, salt: str):
     spark.udf.register("hash_direct", lambda v: hash_direct(v, salt), StringType())
     spark.udf.register("tokenize_op",   lambda v: tokenize_quasi(v, "op"),   StringType())
-    spark.udf.register("tokenize_name", lambda v: tokenize_quasi(v, "name"), StringType())
     spark.udf.register("tokenize_site", lambda v: tokenize_quasi(v, "site"), StringType())
     spark.udf.register("snap_grid",     lambda c: snap_to_grid(c),           DoubleType())
     spark.udf.register("drop_street",   drop_street,                          StringType())
@@ -112,12 +116,20 @@ def mask(spark, input_path: str, output_path: str, salt: str) -> None:
 
     masked = (
         df
-        # Direct identifiers
+        # Direct identifiers — including operator_name: a full name identifies
+        # on its own, so hash it (salted, rotating) rather than tokenize. The
+        # real name lives in the separate, access-controlled association table.
         .withColumn("tool_serial",    F.expr("hash_direct(tool_serial)"))
         .withColumn("operator_email", F.expr("hash_direct(operator_email)"))
+        .withColumn("operator_name",  F.expr("hash_direct(operator_name)"))
         # Quasi-identifiers
+        # TODO(vault): tokenize_* is a one-way hash today, so these tokens are
+        # not recoverable on their own (only by re-hashing a known roster).
+        # Replace with vault-backed tokenization — persist value↔token pairs to
+        # an encrypted, access-controlled store (KMS + DynamoDB, or a separate
+        # S3 bucket only the privacy officer can read) so recovery is proper and
+        # auditable — then drop this hash fallback.
         .withColumn("operator_id",    F.expr("tokenize_op(operator_id)"))
-        .withColumn("operator_name",  F.expr("tokenize_name(operator_name)"))
         .withColumn("job_site_id",    F.expr("tokenize_site(job_site_id)"))
         # Sensitive — location: snap GPS to grid
         .withColumn("gps_lat",        F.expr("snap_grid(cast(gps_lat as double))"))

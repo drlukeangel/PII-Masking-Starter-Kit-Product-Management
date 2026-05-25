@@ -76,7 +76,7 @@ have no identifier attached. These power the product. Don't touch them.
 | `firmware_version`    | Behavioral                | Keep                            |
 | `operator_id`         | Quasi                     | Stable tokenize                 |
 | `operator_email`      | Direct                    | SHA-256 + salt                  |
-| `operator_name`       | Quasi                     | Stable tokenize                 |
+| `operator_name`       | Direct                    | SHA-256 + salt                  |
 | `job_site_id`         | Quasi                     | Stable tokenize                 |
 | `job_site_address`    | Sensitive                 | Drop street; keep city + state  |
 | `gps_lat`, `gps_lon`  | Sensitive (location)      | Snap to 0.01° grid              |
